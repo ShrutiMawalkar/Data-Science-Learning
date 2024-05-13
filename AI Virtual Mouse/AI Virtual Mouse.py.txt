@@ -1,0 +1,70 @@
+import cv2
+import mediapipe as mp
+import pyautogui
+
+# Initialize the webcam
+cam = cv2.VideoCapture(0)
+
+# Initialize face mesh model
+face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
+
+# Get screen size
+screen_w, screen_h = pyautogui.size()
+
+
+while True:
+    # Read frame from the webcam
+    _, frame = cam.read()
+
+    # Flip the frame horizontally
+    frame = cv2.flip(frame, 1)
+
+    # Convert the frame to RGB format
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Process the frame with face mesh model
+    output = face_mesh.process(rgb_frame)
+
+    # Get landmarks
+    landmark_points = output.multi_face_landmarks
+    frame_h, frame_w, _ = frame.shape
+
+    # Process landmarks if detected
+    if landmark_points:
+        landmarks = landmark_points[0].landmark
+
+        # Iterate over selected landmarks
+        for id, landmark in enumerate(landmarks[474:478]):
+            x = int(landmark.x * frame_w)
+            y = int(landmark.y * frame_h)
+            cv2.circle(frame, (x, y), 3, (0, 255, 0))
+            if id == 1:
+                screen_x = screen_w * landmark.x
+                screen_y = screen_h * landmark.y
+                pyautogui.moveTo(screen_x, screen_y)
+
+        # Extract left eye landmarks
+        left_eye = [landmarks[145], landmarks[159]]
+
+        # Iterate over left eye landmarks
+        for landmark in left_eye:
+            x = int(landmark.x * frame_w)
+            y = int(landmark.y * frame_h)
+            cv2.circle(frame, (x, y), 3, (0, 255, 255))
+
+        # Check if left eye is closed
+        if (left_eye[0].y - left_eye[1].y) < 0.004:
+            pyautogui.click()
+            pyautogui.sleep(1)
+
+    # Display the frame
+    cv2.imshow('Eye Controlled Mouse', frame)
+
+    # Wait for key press
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release the webcam and close OpenCV windows
+cam.release()
+cv2.destroyAllWindows()
+
